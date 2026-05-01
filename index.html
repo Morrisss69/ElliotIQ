@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Signal Dashboard</title>
+
+    <!-- Chart Library -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Socket.IO Client (for Forex live data) -->
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            /* --- GLASSY PALETTE --- */
+            --bg-app: #05070a;
+            --glass-panel: rgba(21, 26, 37, 0.65);
+            --glass-panel-hover: rgba(30, 37, 54, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-border-highlight: rgba(255, 255, 255, 0.15);
+
+            --bg-input: rgba(0, 0, 0, 0.3);
+
+            --primary: #F0B90B;
+            --primary-glow: rgba(240, 185, 11, 0.45);
+            --primary-hover: #FCD535;
+
+            --accent-cyan: #F0B90B;
+
+            --text-main: #F1F5F9;
+            --text-dim: #94A3B8;
+            --text-muted: #64748B;
+
+            --color-long: #10B981;
+            --color-short: #EF4444;
+            --color-warn: #F59E0B;
+
+            --font-main: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --blur-strength: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+        }
+
+        body {
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-size: 13px;
+            -webkit-font-smoothing: antialiased;
+            background:
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(6, 182, 212, 0.08), transparent 25%),
+                linear-gradient(180deg, #05070a 0%, #0B0E14 100%);
+        }
+
+        /* --- LAYOUT GRID --- */
+        #app-layout {
+            display: grid;
+            grid-template-columns: 70px 1fr 340px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            gap: 1px;
+            perspective: 1500px;
+        }
+
+        /* --- HEADER --- */
+        #header {
+            grid-column: 1 / -1;
+            background: var(--glass-panel);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+        }
+
+        .logo-text-pro {
+            background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 1px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+        }
+
+        .top-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* --- CONTROLS & INPUTS --- */
+        input,
+        select {
+            background: var(--bg-input);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 9px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: var(--font-mono);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        input#coin-input {
+            text-transform: uppercase;
+            font-weight: 700;
+            width: 120px;
+            text-align: center;
+            color: var(--accent-cyan);
+            letter-spacing: 0.5px;
+        }
+
+        .live-price-display {
+            min-width: 100px;
+            padding: 8px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--accent-cyan);
+            text-align: center;
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+        }
+
+        /* Market Select Specific Style */
+        select.market-select {
+            color: var(--primary);
+            font-weight: 700;
+            border-color: rgba(59, 130, 246, 0.3);
+            text-align: center;
+        }
+
+        button {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: var(--font-main);
+        }
+
+        button.btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 9px 24px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        button.btn-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        button.btn-primary:active {
+            transform: translateY(0);
+        }
+
+        button.btn-primary:disabled {
+            background: var(--glass-panel);
+            color: var(--text-muted);
+            border-color: transparent;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .btn-icon-only {
+            background: var(--bg-input);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-icon-only:hover {
+            color: var(--text-main);
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-icon-only svg {
+            width: 18px;
+            height: 18px;
+        }
+
+
+        /* --- SIDEBAR --- */
+        #sidebar {
+            grid-row: 2 / -1;
+            grid-column: 1 / 2;
+            background: var(--glass-panel);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 24px;
+            gap: 20px;
+        }
+
+        .nav-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .nav-icon:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .nav-icon.active {
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .nav-icon.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 24px;
+            width: 3px;
+            background: var(--primary);
+            border-radius: 0 4px 4px 0;
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        .nav-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* --- MAIN VIEW --- */
+        #main-view {
+            grid-row: 2 / -1;
+            grid-column: 2 / 3;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+
+            transform-style: preserve-3d;
+            perspective: 1200px;
+        }
+
+        .view-section {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+        }
+
+        .view-section.active {
+            display: flex;
+        }
+
+        /* --- 3D ANIMATION CLASSES --- */
+        .chart-init-hidden {
+            opacity: 0;
+            transform: translateY(50px) rotateX(10deg) scale(0.95);
+            filter: blur(5px);
+            transition: none;
+        }
+
+        @keyframes flyIn3D {
+            0% {
+                opacity: 0;
+                transform: translateY(100px) rotateX(20deg) scale(0.9);
+                filter: blur(10px);
+                box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+            }
+
+            60% {
+                opacity: 0.8;
+                transform: translateY(-10px) rotateX(2deg) scale(1.02);
+                box-shadow: 0 0 60px var(--primary-glow);
+                border-color: rgba(59, 130, 246, 0.5);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) rotateX(0) scale(1);
+                filter: blur(0);
+                box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+                border-color: var(--glass-border);
+            }
+        }
+
+        .animate-fly-in {
+            animation: flyIn3D 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* Chart Area - Apply 3D properties */
+        #chart-container {
+            flex: 1;
+            border-bottom: 1px solid var(--glass-border);
+            position: relative;
+            transform-origin: center bottom;
+            will-change: transform, opacity, box-shadow;
+            z-index: 10;
+        }
+
+        /* --- NEW: WATERMARK STYLES --- */
+        .chart-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 6vw;
+            /* Responsive huge size */
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.075);
+            /* Very faded */
+            z-index: 0;
+            /* Behind everything */
+            pointer-events: none;
+            /* Let clicks pass through */
+            white-space: nowrap;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 15px;
+            user-select: none;
+        }
+
+        /* Logs Area (Bottom Panel) */
+        #ai-logs {
+            height: 38%;
+            min-height: 250px;
+            background: rgba(11, 14, 20, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid var(--glass-border);
+
+            transform-origin: center top;
+            opacity: 0;
+        }
+
+        .ai-logs-reveal {
+            animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logs-header {
+            padding: 14px 24px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logs-content {
+            padding: 24px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        /* --- CHART TOOLBAR & OVERLAY --- */
+        .chart-toolbar {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 20;
+            display: flex;
+            gap: 6px;
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(8px);
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .tf-btn {
+            background: transparent;
+            color: var(--text-dim);
+            border: none;
+            padding: 6px 14px;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: none;
+        }
+
+        .tf-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tf-btn.active {
+            color: white;
+            background: var(--primary);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+
+        #trend-meter {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 20;
+            display: flex;
+            gap: 16px;
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(8px);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .trend-item {
+            text-align: center;
+        }
+
+        .trend-label {
+            font-size: 9px;
+            color: var(--text-dim);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .trend-val {
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        /* --- RIGHT SIDEBAR (Info Panel) --- */
+        #right-sidebar {
+            grid-row: 2 / -1;
+            grid-column: 3 / 4;
+            background: var(--glass-panel);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 18px 24px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--glass-border);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        #ai-stats-panel {
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Stats Widget */
+        .stat-section-title {
+            font-size: 10px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--glass-border);
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .stat-box:hover {
+            border-color: var(--glass-border-highlight);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+
+        .stat-box.wave-box {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .stat-box.wave-box .stat-value {
+            width: 100%;
+            line-height: 1.5;
+            white-space: normal;
+        }
+
+        /* --- SETTINGS & SCANNER --- */
+        .settings-container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .settings-card {
+            background: var(--glass-panel);
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 10px;
+        }
+
+        .settings-label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--color-short);
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            width: 100%;
+            transition: 0.2s;
+        }
+
+        .btn-danger:hover {
+            background: var(--color-short);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* --- TRADE CARD STYLES --- */
+        .trade-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .trade-card:hover {
+            border-color: var(--glass-border-highlight);
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .trade-card.active-setup {
+            border-left: 3px solid;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: var(--font-main);
+        }
+
+        .card-badge {
+            font-size: 9px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card-direction {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card-direction.long {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--color-long);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .card-direction.short {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--color-short);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .card-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1px;
+            background: var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .data-cell {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 4px;
+            text-align: center;
+        }
+
+        .data-label {
+            font-size: 9px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .data-val {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+        }
+
+        /* --- ENTRY / SL / TP - වෙන වෙනම පෙන්වන Layout --- */
+        .level-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .level-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border-left: 4px solid;
+            background: rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        .level-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .level-item.entry-level {
+            border-left-color: var(--color-warn);
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
+        }
+
+        .level-item.sl-level {
+            border-left-color: var(--color-short);
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+        }
+
+        .level-item.tp-level {
+            border-left-color: var(--color-long);
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+        }
+
+        .level-item .level-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .level-item .level-icon svg {
+            flex-shrink: 0;
+        }
+
+        .level-item.entry-level .level-icon {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--color-warn);
+        }
+
+        .level-item.sl-level .level-icon {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--color-short);
+        }
+
+        .level-item.tp-level .level-icon {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--color-long);
+        }
+
+        .level-item .level-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .level-item .level-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .level-item.entry-level .level-label {
+            color: var(--color-warn);
+        }
+
+        .level-item.sl-level .level-label {
+            color: var(--color-short);
+        }
+
+        .level-item.tp-level .level-label {
+            color: var(--color-long);
+        }
+
+        .level-item .level-val {
+            font-size: 17px;
+            font-weight: 800;
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+        }
+
+        .level-item.entry-level .level-val {
+            color: var(--color-warn);
+        }
+
+        .level-item.sl-level .level-val {
+            color: var(--color-short);
+        }
+
+        .level-item.tp-level .level-val {
+            color: var(--color-long);
+        }
+
+        .tp-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .tp-list .tp-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .tp-list .tp-row span:first-child {
+            font-size: 10px;
+            color: var(--text-muted);
+            min-width: 32px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .tp-list .tp-row span:last-child {
+            color: var(--color-long);
+        }
+
+        .micro-analysis-box {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%);
+            border: 1px solid rgba(6, 182, 212, 0.25);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+        }
+
+        .micro-analysis-box .micro-title {
+            font-size: 10px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .micro-analysis-box .micro-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--glass-border);
+        }
+
+        .micro-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .key-levels-box {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .key-levels-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .key-levels-val {
+            font-size: 12px;
+            color: var(--text-main);
+            line-height: 1.5;
+            font-family: var(--font-mono);
+        }
+
+        .micro-item {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .micro-item-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .micro-item-value {
+            font-size: 12px;
+            color: var(--text-main);
+            line-height: 1.5;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+
+        .card-summary {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-style: italic;
+            line-height: 1.5;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 14px;
+            opacity: 0.8;
+        }
+
+        /* --- SCANNER CARDS --- */
+        .scan-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .scan-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border-color: var(--primary);
+        }
+
+        .scan-ticker {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+
+        /* Loader Animation */
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
+
+        .status-loading {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Startup Overlay Removed as per request -->
+
+    <div id="app-layout">
+        <!-- HEADER -->
+        <div id="header">
+            <div class="logo-area">
+                <img src="images/icon.png" alt="Logo" class="logo-icon" style="object-fit: contain;">
+                <span>SIGNAL <span class="logo-text-pro">AI</span></span>
+            </div>
+            <div id="dashboard-controls" class="top-controls">
+                <!-- NEW: Dashboard Market Selector -->
+                <select id="market-selector" class="market-select" style="width: 100px;">
+                    <option value="crypto">CRYPTO</option>
+                </select>
+
+                <input type="text" id="coin-input" value="BTCUSDT" placeholder="SYMBOL">
+                <div id="live-price" class="live-price-display">-</div>
+                <select id="timeframe-select">
+                    <option value="15m">15m</option>
+                    <option value="1h">1h</option>
+                    <option value="4h">4h</option>
+                    <option value="1d">1D</option>
+                </select>
+
+                <button id="analyze-btn" class="btn-primary">RUN ANALYSIS</button>
+            </div>
+        </div>
+
+        <!-- LEFT TOOLBAR -->
+        <div id="sidebar">
+            <div class="nav-icon active" onclick="switchTab('dashboard', this)" title="Chart & Analysis">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M3 3v18h18" />
+                    <path d="M18 9l-5 5-4-4-3 3" />
+                </svg>
+            </div>
+            <div class="nav-icon" onclick="switchTab('scanner', this)" title="Market Scanner">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v8" />
+                    <path d="M8 12h8" />
+                </svg>
+            </div>
+            <div class="nav-icon" onclick="switchTab('settings', this)" title="Settings">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- MAIN AREA -->
+        <div id="main-view">
+            <!-- DASHBOARD TAB -->
+            <div id="view-dashboard" class="view-section active">
+                <!-- CHART (Start Hidden for Animation) -->
+                <div id="chart-container" class="chart-init-hidden">
+
+                    <!-- Chart canvas container (required by LightweightCharts) -->
+                    <div id="chart-inner"
+                        style="position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%;"></div>
+
+                    <!-- WATERMARK (NEW) -->
+                    <div class="chart-watermark">AI Signal Dashboard</div>
+
+                    <div class="chart-toolbar">
+                        <button class="tf-btn active" data-tf="15m">15m</button>
+                        <button class="tf-btn" data-tf="1h">1H</button>
+                        <button class="tf-btn" data-tf="4h">4H</button>
+                        <button class="tf-btn" data-tf="1d">1D</button>
+                    </div>
+
+                    <div id="trend-meter">
+                        <div class="trend-item">
+                            <div class="trend-label">MACRO TREND</div>
+                            <div id="meter-macro" class="trend-val">-</div>
+                        </div>
+                        <div style="width:1px; background:var(--glass-border); opacity:0.5;"></div>
+                        <div class="trend-item">
+                            <div class="trend-label">WAVE PHASE</div>
+                            <div id="meter-micro" class="trend-val">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOGS / SIGNALS (Start Hidden) -->
+                <div id="ai-logs">
+                    <div class="logs-header">
+                        <span>Analysis Terminal</span>
+                        <div
+                            style="width: 8px; height: 8px; background: var(--color-long); border-radius: 50%; box-shadow: 0 0 8px var(--color-long);">
+                        </div>
+                    </div>
+                    <div id="ai-logs-content" class="logs-content">
+                        <div
+                            style="text-align:center; color:var(--text-dim); margin-top:20px; font-size:12px; font-family: var(--font-mono);">
+                            Waiting for input...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCANNER TAB -->
+            <div id="view-scanner" class="view-section">
+                <div id="scanner-header"
+                    style="padding: 24px; border-bottom: 1px solid var(--glass-border); background: var(--glass-panel); backdrop-filter: blur(16px); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size:16px; font-weight:700; color:var(--text-main);">MARKET SCANNER</div>
+                        <div style="font-size:11px; color:var(--text-dim);">AI-powered crypto opportunity scanner</div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <select id="scan-mode" style="width:150px; background: rgba(0,0,0,0.4);">
+                            <option value="scalp">Scalp (15m)</option>
+                            <option value="swing">Swing (4h)</option>
+                        </select>
+                        <button id="start-scan-btn" class="btn-primary">START SCAN</button>
+                    </div>
+
+                </div>
+                <div id="scanner-grid" style="padding: 24px; overflow-y: auto; height: 100%;">
+                    <div
+                        style="text-align:center; color:var(--text-dim); margin-top:80px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                        <svg style="width: 40px; height: 40px; opacity: 0.2;" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <span>Select a mode to identify opportunities.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS TAB -->
+            <div id="view-settings" class="view-section" style="overflow-y: auto;">
+                <div class="settings-container">
+                    <div class="settings-card">
+                        <div class="settings-title">Defaults</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <label class="settings-label">Default Coin</label>
+                                <input type="text" id="set-def-coin" placeholder="BTCUSDT" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label class="settings-label">Default Timeframe</label>
+                                <select id="set-def-tf" style="width: 100%;">
+                                    <option value="15m">15 Minutes</option>
+                                    <option value="1h">1 Hour</option>
+                                    <option value="4h">4 Hours</option>
+                                    <option value="1d">1 Day</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="settings-label">Scanner Mode</label>
+                                <select id="set-def-scan" style="width: 100%;">
+                                    <option value="scalp">Scalp</option>
+                                    <option value="swing">Swing</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top: 25px; text-align: right;">
+                            <button id="save-settings-btn" class="btn-primary">SAVE SETTINGS</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div id="right-sidebar">
+            <div class="panel-header">Market Intel</div>
+            <div id="ai-stats-panel">
+                <div style="text-align:center; color:var(--text-dim); font-size:11px; margin-top:40px;">No Active
+                    Analysis</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="renderer.js"></script>
+
+</body>
+
+</html>

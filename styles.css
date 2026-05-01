@@ -1,0 +1,181 @@
+/* styles.css */
+
+/* මූලික සැකසුම් සහ ෆොන්ට්ස් */
+:root {
+    --primary-color: #00d2ff; /* දීප්තිමත් නිල් */
+    --secondary-color: #3a7bd5; /* තද නිල් */
+    --accent-color: #9b59b6; /* දම් පැහැය */
+    --bg-dark: #0f0f1a;
+    --text-light: #ffffff;
+    --text-gray: #b3b3b3;
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* පසුබිම් පින්තූරය - images ෆෝල්ඩරය ඇතුලේ bg_robot.jpg තිබිය යුතුයි */
+    background: url('images/bg_robot.jpg') no-repeat center center/cover;
+    position: relative;
+    background-color: #050505; /* පින්තූරය ලෝඩ් නොවුනොත් කළු පාට */
+}
+
+/* පසුබිම අඳුරු කිරීමේ Overlay එක */
+body::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7); 
+    z-index: -1;
+}
+
+/* ප්‍රධාන Login කොටුව (Glass Effect) */
+.login-container {
+    padding: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.login-box {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    color: var(--text-light);
+}
+
+/* ලෝගෝ සහ මාතෘකා කොටස */
+.logo-section {
+    margin-bottom: 30px;
+}
+
+.glow-icon {
+    width: 80px;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.6));
+    animation: pulse-glow 3s infinite alternate;
+}
+
+.logo-section h2 {
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    margin-bottom: 5px;
+    background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.logo-section p {
+    color: var(--text-gray);
+    font-size: 0.85rem;
+}
+
+/* Input Fields සැකසීම */
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 20px 12px 45px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    outline: none;
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+    border-color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+}
+
+.input-group .input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+/* Button සැකසීම */
+#login-btn, .google-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-image: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+    background-size: 200% auto;
+    color: white;
+    transition: all 0.3s ease;
+    margin-bottom: 10px;
+}
+
+.glow-on-hover:hover {
+    background-position: right center;
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
+    transform: scale(1.02);
+}
+
+.google-btn {
+    background: #ffffff;
+    color: #333 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.google-btn:hover {
+    background: #f1f1f1;
+}
+
+/* Links */
+.links {
+    margin-top: 15px;
+    font-size: 0.85rem;
+}
+
+.links a {
+    color: var(--text-gray);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.links a:hover {
+    color: var(--primary-color);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+    0% { filter: drop-shadow(0 0 5px rgba(0, 210, 255, 0.4)); }
+    100% { filter: drop-shadow(0 0 20px rgba(0, 210, 255, 0.9)); }
+}
